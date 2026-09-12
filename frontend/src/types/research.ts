@@ -45,3 +45,14 @@ export interface ResearchAnalyzeResponse {
   experiment: ResearchExperiment;
   missing_information: MissingInfoItem[];
 }
+
+export interface FieldClarification {
+  field: string;
+  value: string | string[];
+}
+
+export interface ResearchClarifyRequest {
+  experiment: ResearchExperiment;
+  clarifications: FieldClarification[];
+}
+

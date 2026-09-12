@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import Generic, List, Optional, TypeVar, Union
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ExperimentStatus(str, Enum):
@@ -84,3 +84,60 @@ class ResearchAnalyzeResponse(BaseModel):
     status: ExperimentStatus = Field(..., description="Overall experiment validation status")
     experiment: ResearchExperiment = Field(..., description="Structured experiment specification")
     missing_information: List[MissingInfoItem] = Field(default_factory=list, description="All identified missing parameters")
+
+
+SUPPORTED_EXPERIMENT_FIELDS = {
+    "instrument",
+    "timeframe",
+    "entry_condition",
+    "exit_condition",
+    "holding_period",
+    "filters",
+    "test_period",
+    "cost_assumptions",
+}
+
+
+class FieldClarification(BaseModel):
+    """
+    Structured user response to a parameter clarification prompt.
+    """
+    field: str = Field(..., description="Target parameter name to update")
+    value: Union[str, List[str]] = Field(..., description="User's clarified value or selected default")
+
+    @field_validator("field")
+    @classmethod
+    def validate_field_name(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if clean not in SUPPORTED_EXPERIMENT_FIELDS:
+            raise ValueError(
+                f"Unsupported experiment field '{v}'. Supported fields are: {sorted(list(SUPPORTED_EXPERIMENT_FIELDS))}"
+            )
+        return clean
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Union[str, List[str]]) -> Union[str, List[str]]:
+        if isinstance(v, str):
+            if not v.strip():
+                raise ValueError("Clarification value cannot be empty or whitespace.")
+            return v.strip()
+        elif isinstance(v, list):
+            cleaned = [item.strip() for item in v if isinstance(item, str) and item.strip()]
+            if not cleaned:
+                raise ValueError("Clarification list value cannot be empty.")
+            return cleaned
+        raise ValueError("Clarification value must be a string or a list of strings.")
+
+
+class ResearchClarifyRequest(BaseModel):
+    """
+    Request model for applying structured user clarifications to an existing ResearchExperiment.
+    """
+    experiment: ResearchExperiment = Field(..., description="The existing structured experiment to refine")
+    clarifications: List[FieldClarification] = Field(
+        ...,
+        min_length=1,
+        description="One or more field clarifications provided by the user",
+    )
+

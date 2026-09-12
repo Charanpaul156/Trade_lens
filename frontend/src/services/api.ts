@@ -1,5 +1,9 @@
 import { HealthResponse } from '../types/health';
-import { ResearchAnalyzeRequest, ResearchAnalyzeResponse } from '../types/research';
+import {
+  ResearchAnalyzeRequest,
+  ResearchAnalyzeResponse,
+  ResearchClarifyRequest,
+} from '../types/research';
 
 /**
  * Base API URL derived dynamically from environment variables.
@@ -99,7 +103,53 @@ export async function analyzeResearchQuestion(
   }
 }
 
+/**
+ * Send structured field clarifications for an existing experiment to the backend.
+ */
+export async function clarifyExperiment(
+  request: ResearchClarifyRequest
+): Promise<{ data: ResearchAnalyzeResponse; latencyMs: number }> {
+  const endpoint = `${API_BASE_URL}/api/research/clarify`;
+  const startTime = performance.now();
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    const latencyMs = Math.round(performance.now() - startTime);
+
+    if (!response.ok) {
+      let errorMsg = `Clarification request failed with status ${response.status}`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          errorMsg = typeof errorJson.detail === 'string' ? errorJson.detail : JSON.stringify(errorJson.detail);
+        }
+      } catch {
+        // use fallback errorMsg
+      }
+      throw new ApiError(errorMsg, response.status);
+    }
+
+    const data: ResearchAnalyzeResponse = await response.json();
+    return { data, latencyMs };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : 'Unknown network connection failure';
+    throw new ApiError(`Unable to reach clarification service at ${API_BASE_URL}: ${message}`);
+  }
+}
+
 export function getApiBaseUrl(): string {
   return API_BASE_URL;
 }
+
 

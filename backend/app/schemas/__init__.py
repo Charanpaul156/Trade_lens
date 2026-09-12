@@ -8,6 +8,9 @@ from app.schemas.research import (
     ResearchExperiment,
     ResearchAnalyzeRequest,
     ResearchAnalyzeResponse,
+    FieldClarification,
+    ResearchClarifyRequest,
+    SUPPORTED_EXPERIMENT_FIELDS,
 )
 
 __all__ = [
@@ -20,4 +23,7 @@ __all__ = [
     "ResearchExperiment",
     "ResearchAnalyzeRequest",
     "ResearchAnalyzeResponse",
+    "FieldClarification",
+    "ResearchClarifyRequest",
+    "SUPPORTED_EXPERIMENT_FIELDS",
 ]

@@ -23,6 +23,9 @@ from app.schemas.research import (
     BacktestMetrics,
     SimulatedTrade,
     EquityPoint,
+    EvidenceLevel,
+    LearnReport,
+    ResearchLearnRequest,
 )
 
 __all__ = [
@@ -50,4 +53,7 @@ __all__ = [
     "BacktestMetrics",
     "SimulatedTrade",
     "EquityPoint",
+    "EvidenceLevel",
+    "LearnReport",
+    "ResearchLearnRequest",
 ]

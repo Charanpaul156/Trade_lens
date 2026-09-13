@@ -7,9 +7,12 @@ from app.schemas.research import (
     ResearchDefineRequest,
     TestExecutionRequest,
     BacktestResult,
+    ResearchLearnRequest,
+    LearnReport,
 )
 from app.services.experiment_clarifier import ExperimentClarifier
 from app.services.backtest_engine import BacktestEngine
+from app.services.research_learner import ResearchLearner
 from app.services.research_analyzer import (
     BaseResearchAnalyzer,
     get_research_analyzer,
@@ -146,4 +149,25 @@ async def run_backtest_simulation(
     return result
 
 
-
+@router.post(
+    "/learn",
+    response_model=LearnReport,
+    status_code=status.HTTP_200_OK,
+    summary="Synthesize Backtest Learnings & Interpretation",
+    description="Generates a transparent, rule-based LearnReport from backtest results with mutually exclusive evidence levels, explicit limitations, and honest research questions.",
+)
+async def generate_research_learnings(
+    request: ResearchLearnRequest,
+) -> LearnReport:
+    """
+    Synthesizes a transparent, deterministic LearnReport from a completed BacktestResult and DefinedExperimentSpec.
+    Guarantees:
+    - Stateless and deterministic.
+    - Zero LLM, database, or external network calls.
+    - Mutually exclusive evidence level classification.
+    - Formulates research avenues without giving trading or parameter optimization advice.
+    """
+    return ResearchLearner.generate_report(
+        result=request.result,
+        spec=request.spec,
+    )

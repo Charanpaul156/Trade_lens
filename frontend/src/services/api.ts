@@ -7,6 +7,8 @@ import {
   ResearchDefineRequest,
   BacktestResult,
   TestExecutionRequest,
+  LearnReport,
+  ResearchLearnRequest,
 } from '../types/research';
 
 /**
@@ -244,5 +246,51 @@ export async function runBacktestSimulation(
     }
     const message = error instanceof Error ? error.message : 'Unknown network connection failure';
     throw new ApiError(`Unable to reach backtest service at ${API_BASE_URL}: ${message}`);
+  }
+}
+
+/**
+ * Generates a deterministic research interpretation report (LearnReport) from backtest results.
+ * Calls POST /api/research/learn without external network, database, or LLM calls.
+ */
+export async function generateLearnReport(
+  request: ResearchLearnRequest
+): Promise<{ data: LearnReport; latencyMs: number }> {
+  const endpoint = `${API_BASE_URL}/api/research/learn`;
+  const startTime = performance.now();
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    const latencyMs = Math.round(performance.now() - startTime);
+
+    if (!response.ok) {
+      let errorMsg = `Learn request failed with status ${response.status}`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          errorMsg = typeof errorJson.detail === 'string' ? errorJson.detail : JSON.stringify(errorJson.detail);
+        }
+      } catch {
+        // fallback to errorMsg
+      }
+      throw new ApiError(errorMsg, response.status);
+    }
+
+    const data: LearnReport = await response.json();
+    return { data, latencyMs };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : 'Unknown network connection failure';
+    throw new ApiError(`Unable to reach research learn service at ${API_BASE_URL}: ${message}`);
   }
 }

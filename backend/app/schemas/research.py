@@ -414,4 +414,40 @@ class TestExecutionRequest(BaseModel):
     initial_capital: float = Field(default=100000.0, ge=1000.0, description="Starting portfolio cash in local currency")
 
 
+class EvidenceLevel(str, Enum):
+    """
+    Mutually exclusive classification of simulation evidence level.
+    """
+    SYNTHETIC_INSUFFICIENT_DATA = "SYNTHETIC_INSUFFICIENT_DATA"
+    SYNTHETIC_FRICTION_DOMINATED = "SYNTHETIC_FRICTION_DOMINATED"
+    SYNTHETIC_NEGATIVE_EDGE = "SYNTHETIC_NEGATIVE_EDGE"
+    SYNTHETIC_CANDIDATE_FOR_REAL_DATA = "SYNTHETIC_CANDIDATE_FOR_REAL_DATA"
+
+
+class LearnReport(BaseModel):
+    """
+    Transparent research interpretation report synthesizing backtest simulation outcomes.
+    Explicitly bounds findings as synthetic simulation evidence without claiming live market validity.
+    """
+    experiment_id: str
+    instrument: str
+    timeframe: str
+    evidence_level: EvidenceLevel
+    summary: str
+    performance_observations: List[str]
+    friction_observation: str
+    risk_observations: List[str]
+    limitations: List[str]
+    next_research_steps: List[str]
+    disclaimer: str
+
+
+class ResearchLearnRequest(BaseModel):
+    """
+    Payload for synthesizing a LearnReport from a BacktestResult and its DefinedExperimentSpec.
+    """
+    result: BacktestResult = Field(..., description="Completed simulation result payload")
+    spec: DefinedExperimentSpec = Field(..., description="Locked experiment execution specification")
+
+
 

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { BacktestResult, DefinedExperimentSpec } from '../types/research';
+import { BacktestResult, DefinedExperimentSpec, LearnReport } from '../types/research';
+import { generateLearnReport } from '../services/api';
+import { LearnReportView } from './LearnReportView';
 import {
   ArrowLeft,
   TrendingUp,
@@ -12,6 +14,8 @@ import {
   Sparkles,
   DollarSign,
   Percent,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 
 interface BacktestResultViewProps {
@@ -34,6 +38,35 @@ export const BacktestResultView: React.FC<BacktestResultViewProps> = ({
     drawdown_pct: number;
     in_trade: boolean;
   } | null>(null);
+
+  const [learnReport, setLearnReport] = useState<LearnReport | null>(null);
+  const [isLearning, setIsLearning] = useState<boolean>(false);
+  const [learnError, setLearnError] = useState<string | null>(null);
+  const [learnLatencyMs, setLearnLatencyMs] = useState<number | null>(null);
+
+  const handleGenerateLearnReport = async () => {
+    setIsLearning(true);
+    setLearnError(null);
+    try {
+      const response = await generateLearnReport({ result, spec });
+      setLearnReport(response.data);
+      setLearnLatencyMs(response.latencyMs);
+    } catch (err: any) {
+      setLearnError(err.message || 'Failed to synthesize research report.');
+    } finally {
+      setIsLearning(false);
+    }
+  };
+
+  if (learnReport) {
+    return (
+      <LearnReportView
+        report={learnReport}
+        latencyMs={learnLatencyMs}
+        onBackToSimulation={() => setLearnReport(null)}
+      />
+    );
+  }
 
   const { metrics } = result;
   const isNetPositive = metrics.net_return_pct >= 0;
@@ -564,6 +597,63 @@ export const BacktestResultView: React.FC<BacktestResultViewProps> = ({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Error Alert if Learn fails */}
+      {learnError && (
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between gap-3 text-xs text-rose-300">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>{learnError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLearnError(null)}
+            className="text-[11px] font-bold text-rose-400 hover:text-rose-200 underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Action Bar: Proceed to Phase 5 • LEARN */}
+      <div className="p-6 rounded-2xl border border-purple-500/40 bg-gradient-to-r from-purple-950/40 via-slate-900/70 to-indigo-950/40 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              Phase 5 &bull; LEARN
+            </span>
+            <span className="text-xs font-bold text-white">Synthesize Research Interpretation</span>
+          </div>
+          <p className="text-xs text-slate-400 mt-1">
+            Derive transparent performance observations, friction impact, risk boundaries, and next hypothesis questions from these simulation results.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={handleGenerateLearnReport}
+            disabled={isLearning}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold text-white transition shadow-lg active:scale-95 flex items-center gap-2 ${
+              isLearning
+                ? 'bg-slate-700 cursor-not-allowed opacity-80'
+                : 'bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 shadow-purple-500/20'
+            }`}
+          >
+            {isLearning ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span>Synthesizing Learnings...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 text-purple-200" />
+                <span>Generate Research Synthesis &amp; Learnings</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

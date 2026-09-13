@@ -154,3 +154,28 @@ export interface TestExecutionRequest {
   spec: DefinedExperimentSpec;
   initial_capital?: number;
 }
+
+export type EvidenceLevel =
+  | 'SYNTHETIC_INSUFFICIENT_DATA'
+  | 'SYNTHETIC_FRICTION_DOMINATED'
+  | 'SYNTHETIC_NEGATIVE_EDGE'
+  | 'SYNTHETIC_CANDIDATE_FOR_REAL_DATA';
+
+export interface LearnReport {
+  experiment_id: string;
+  instrument: string;
+  timeframe: string;
+  evidence_level: EvidenceLevel;
+  summary: string;
+  performance_observations: string[];
+  friction_observation: string;
+  risk_observations: string[];
+  limitations: string[];
+  next_research_steps: string[];
+  disclaimer: string;
+}
+
+export interface ResearchLearnRequest {
+  result: BacktestResult;
+  spec: DefinedExperimentSpec;
+}

@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
-import { analyzeResearchQuestion, clarifyExperiment, ApiError } from '../services/api';
-import { ResearchAnalyzeResponse, ExtractedField, FieldClarification } from '../types/research';
+import { analyzeResearchQuestion, clarifyExperiment, defineExperiment, ApiError } from '../services/api';
+import {
+  ResearchAnalyzeResponse,
+  ExtractedField,
+  FieldClarification,
+  DefinedExperimentSpec,
+} from '../types/research';
 import { ProvenanceBadge } from './ProvenanceBadge';
 import { MissingInfoCard } from './MissingInfoCard';
+import { DefinedExperimentView } from './DefinedExperimentView';
 import {
   Sparkles,
   ArrowRight,
@@ -18,6 +24,7 @@ import {
   ShieldCheck,
   CheckCircle,
   RotateCcw,
+  Lock,
 } from 'lucide-react';
 
 const PRESET_IDEAS = [
@@ -50,6 +57,9 @@ export const ResearchAnalyzerView: React.FC = () => {
   const [latency, setLatency] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [clarifyError, setClarifyError] = useState<string | null>(null);
+  const [definedSpec, setDefinedSpec] = useState<DefinedExperimentSpec | null>(null);
+  const [isDefining, setIsDefining] = useState<boolean>(false);
+  const [defineError, setDefineError] = useState<string | null>(null);
 
   // Staged clarifications: field -> chosen value
   const [stagedClarifications, setStagedClarifications] = useState<Record<string, string>>({});
@@ -64,6 +74,8 @@ export const ResearchAnalyzerView: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setClarifyError(null);
+    setDefineError(null);
+    setDefinedSpec(null);
     setStagedClarifications({});
 
     try {
@@ -92,6 +104,7 @@ export const ResearchAnalyzerView: React.FC = () => {
       [field]: value,
     }));
     setClarifyError(null);
+    setDefineError(null);
   };
 
   const handleClearClarification = (field: string) => {
@@ -110,6 +123,8 @@ export const ResearchAnalyzerView: React.FC = () => {
 
     setIsClarifying(true);
     setClarifyError(null);
+    setDefineError(null);
+    setDefinedSpec(null);
 
     const clarifications: FieldClarification[] = stagedKeys.map((field) => ({
       field,
@@ -132,6 +147,29 @@ export const ResearchAnalyzerView: React.FC = () => {
       }
     } finally {
       setIsClarifying(false);
+    }
+  };
+
+  const handleDefineExperiment = async () => {
+    if (!response?.experiment) return;
+
+    setIsDefining(true);
+    setDefineError(null);
+
+    try {
+      const result = await defineExperiment({
+        experiment: response.experiment,
+      });
+      setDefinedSpec(result.data);
+      setLatency(result.latencyMs);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setDefineError(err.message);
+      } else {
+        setDefineError('Failed to define experiment specification.');
+      }
+    } finally {
+      setIsDefining(false);
     }
   };
 
@@ -285,23 +323,60 @@ export const ResearchAnalyzerView: React.FC = () => {
 
       {/* Structured Experiment Results View */}
       {experiment && (
-        <div className="space-y-6 animate-fadeIn">
-          {/* READY Banner when fully defined */}
-          {experiment.status === 'READY' && (
-            <div className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 backdrop-blur-xl flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0">
-                <CheckCircle className="w-5 h-5" />
+        definedSpec ? (
+          <DefinedExperimentView
+            spec={definedSpec}
+            latencyMs={latency}
+            onBackToEdit={() => setDefinedSpec(null)}
+          />
+        ) : (
+          <div className="space-y-6 animate-fadeIn">
+            {/* READY Banner when fully defined */}
+            {experiment.status === 'READY' && (
+              <div className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0">
+                    <CheckCircle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-300">
+                      Experiment Specification Finalized &amp; Ready
+                    </h4>
+                    <p className="text-xs text-emerald-400/90 mt-0.5">
+                      All quantitative parameters, execution triggers, holding periods, and friction assumptions are fully confirmed.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={isDefining}
+                    onClick={handleDefineExperiment}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-md shadow-emerald-500/20 active:scale-95 transition flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {isDefining ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Locking Specification...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>Lock &amp; Define Specification</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
-              <div className="flex-1">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-300">
-                  Experiment Specification Finalized &amp; Ready
-                </h4>
-                <p className="text-xs text-emerald-400/90 mt-0.5">
-                  All quantitative parameters, execution triggers, holding periods, and friction assumptions are fully confirmed.
-                </p>
+            )}
+
+            {defineError && (
+              <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-900/60 text-rose-300 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>{defineError}</span>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Status Header & Hypothesis Formulation */}
           <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur-xl space-y-4">
@@ -485,6 +560,7 @@ export const ResearchAnalyzerView: React.FC = () => {
             </div>
           )}
         </div>
+        )
       )}
     </div>
   );

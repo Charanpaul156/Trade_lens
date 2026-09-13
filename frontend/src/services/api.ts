@@ -3,6 +3,8 @@ import {
   ResearchAnalyzeRequest,
   ResearchAnalyzeResponse,
   ResearchClarifyRequest,
+  DefinedExperimentSpec,
+  ResearchDefineRequest,
 } from '../types/research';
 
 /**
@@ -151,5 +153,51 @@ export async function clarifyExperiment(
 export function getApiBaseUrl(): string {
   return API_BASE_URL;
 }
+
+/**
+ * Validates that an experiment is READY and locks it into a DefinedExperimentSpec execution contract.
+ */
+export async function defineExperiment(
+  request: ResearchDefineRequest
+): Promise<{ data: DefinedExperimentSpec; latencyMs: number }> {
+  const endpoint = `${API_BASE_URL}/api/research/define`;
+  const startTime = performance.now();
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    const latencyMs = Math.round(performance.now() - startTime);
+
+    if (!response.ok) {
+      let errorMsg = `Define request failed with status ${response.status}`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          errorMsg = typeof errorJson.detail === 'string' ? errorJson.detail : JSON.stringify(errorJson.detail);
+        }
+      } catch {
+        // fallback to errorMsg
+      }
+      throw new ApiError(errorMsg, response.status);
+    }
+
+    const data: DefinedExperimentSpec = await response.json();
+    return { data, latencyMs };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : 'Unknown network connection failure';
+    throw new ApiError(`Unable to reach define service at ${API_BASE_URL}: ${message}`);
+  }
+}
+
 
 

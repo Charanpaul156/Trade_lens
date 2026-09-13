@@ -11,6 +11,13 @@ from app.schemas.research import (
     FieldClarification,
     ResearchClarifyRequest,
     SUPPORTED_EXPERIMENT_FIELDS,
+    DefinedExperimentSpec,
+    ResearchDefineRequest,
+    DefinedMarketContext,
+    DefinedSignalRules,
+    DefinedPositionRules,
+    DefinedBacktestBounds,
+    ParameterProvenanceRecord,
 )
 
 __all__ = [
@@ -26,4 +33,11 @@ __all__ = [
     "FieldClarification",
     "ResearchClarifyRequest",
     "SUPPORTED_EXPERIMENT_FIELDS",
+    "DefinedExperimentSpec",
+    "ResearchDefineRequest",
+    "DefinedMarketContext",
+    "DefinedSignalRules",
+    "DefinedPositionRules",
+    "DefinedBacktestBounds",
+    "ParameterProvenanceRecord",
 ]

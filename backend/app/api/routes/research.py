@@ -3,6 +3,8 @@ from app.schemas.research import (
     ResearchAnalyzeRequest,
     ResearchAnalyzeResponse,
     ResearchClarifyRequest,
+    DefinedExperimentSpec,
+    ResearchDefineRequest,
 )
 from app.services.experiment_clarifier import ExperimentClarifier
 from app.services.research_analyzer import (
@@ -76,4 +78,35 @@ async def clarify_experiment(
         experiment=updated_experiment,
         missing_information=updated_experiment.missing_information,
     )
+
+
+@router.post(
+    "/define",
+    response_model=DefinedExperimentSpec,
+    status_code=status.HTTP_200_OK,
+    summary="Define Experiment Execution Contract",
+    description="Validates that a ResearchExperiment is READY and all execution-critical parameters are confirmed, then projects it into a locked DefinedExperimentSpec contract.",
+)
+async def define_experiment(
+    request: ResearchDefineRequest,
+) -> DefinedExperimentSpec:
+    """
+    Formally locks a READY ResearchExperiment into a DefinedExperimentSpec execution contract.
+    Enforces a strict safety boundary:
+    - Status must be READY
+    - Zero unresolved missing information
+    - No execution-critical parameters may be empty, missing, or require confirmation
+    - No unconfirmed AI-inferred assumptions
+    - Stateless: no LLM, database, market data, or backtesting logic.
+    """
+    try:
+        spec = DefinedExperimentSpec.from_experiment(request.experiment)
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(err),
+        )
+
+    return spec
+
 

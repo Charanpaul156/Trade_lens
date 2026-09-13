@@ -56,3 +56,44 @@ export interface ResearchClarifyRequest {
   clarifications: FieldClarification[];
 }
 
+export interface ParameterProvenanceRecord {
+  field: string;
+  source: ParameterSource;
+  confidence: number;
+  requires_confirmation: boolean;
+}
+
+export interface DefinedMarketContext {
+  instrument: string;
+  timeframe: string;
+}
+
+export interface DefinedSignalRules {
+  entry_condition: string;
+  filters: string[];
+}
+
+export interface DefinedPositionRules {
+  exit_condition?: string | null;
+  holding_period?: string | null;
+}
+
+export interface DefinedBacktestBounds {
+  test_period: string;
+  cost_assumptions: string;
+}
+
+export interface DefinedExperimentSpec {
+  research_question: string;
+  hypothesis?: string | null;
+  market_context: DefinedMarketContext;
+  signal_rules: DefinedSignalRules;
+  position_rules: DefinedPositionRules;
+  backtest_bounds: DefinedBacktestBounds;
+  provenance_audit: ParameterProvenanceRecord[];
+}
+
+export interface ResearchDefineRequest {
+  experiment: ResearchExperiment;
+}
+

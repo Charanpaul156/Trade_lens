@@ -18,6 +18,11 @@ from app.schemas.research import (
     DefinedPositionRules,
     DefinedBacktestBounds,
     ParameterProvenanceRecord,
+    TestExecutionRequest,
+    BacktestResult,
+    BacktestMetrics,
+    SimulatedTrade,
+    EquityPoint,
 )
 
 __all__ = [
@@ -40,4 +45,9 @@ __all__ = [
     "DefinedPositionRules",
     "DefinedBacktestBounds",
     "ParameterProvenanceRecord",
+    "TestExecutionRequest",
+    "BacktestResult",
+    "BacktestMetrics",
+    "SimulatedTrade",
+    "EquityPoint",
 ]

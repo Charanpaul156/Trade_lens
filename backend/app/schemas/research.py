@@ -337,3 +337,81 @@ class ResearchDefineRequest(BaseModel):
     experiment: ResearchExperiment = Field(..., description="The finalized ResearchExperiment to define")
 
 
+class SimulatedTrade(BaseModel):
+    """
+    Simulated trade execution record with explicit entry/exit timing and friction impact.
+    """
+    trade_id: int
+    entry_bar_index: int
+    entry_date: str
+    entry_price: float
+    exit_bar_index: int
+    exit_date: str
+    exit_price: float
+    exit_reason: str  # "HOLDING_PERIOD_EXPIRY" | "PROFIT_TARGET" | "STOP_LOSS"
+    gross_pnl_pct: float
+    net_pnl_pct: float
+    friction_paid_pct: float
+    holding_bars: int
+    is_win: bool
+
+
+class EquityPoint(BaseModel):
+    """
+    Daily portfolio valuation point on the equity curve.
+    """
+    date: str
+    equity: float
+    drawdown_pct: float
+    in_trade: bool
+
+
+class BacktestMetrics(BaseModel):
+    """
+    Summary performance and risk analytics for a backtest run.
+    Guaranteed never to return NaN or Infinity.
+    """
+    total_trades: int
+    winning_trades: int
+    losing_trades: int
+    win_rate_pct: float
+    net_return_pct: float
+    gross_return_pct: float
+    friction_drag_pct: float
+    profit_factor: float
+    max_drawdown_pct: float
+    avg_trade_return_pct: float
+    avg_holding_bars: float
+    sharpe_ratio: Optional[float] = None
+
+
+class BacktestResult(BaseModel):
+    """
+    Complete output of a deterministic backtest simulation.
+    Explicitly distinguishes synthetic simulation from live market results.
+    """
+    experiment_id: str
+    instrument: str
+    timeframe: str
+    test_period: str
+    initial_capital: float
+    final_equity: float
+    metrics: BacktestMetrics
+    equity_curve: List[EquityPoint]
+    trades: List[SimulatedTrade]
+    execution_timing_convention: str
+    simulation_disclaimer: str
+    reproducible_seed: int
+
+
+class TestExecutionRequest(BaseModel):
+    """
+    Request model to execute a deterministic backtest on a DefinedExperimentSpec.
+    Accepts ONLY a DefinedExperimentSpec to ensure DEFINE gating cannot be bypassed.
+    """
+    __test__ = False
+    spec: DefinedExperimentSpec = Field(..., description="Locked, validated experiment execution contract")
+    initial_capital: float = Field(default=100000.0, ge=1000.0, description="Starting portfolio cash in local currency")
+
+
+

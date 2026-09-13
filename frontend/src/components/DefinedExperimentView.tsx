@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { DefinedExperimentSpec } from '../types/research';
+import { DefinedExperimentSpec, BacktestResult } from '../types/research';
 import { ProvenanceBadge } from './ProvenanceBadge';
+import { BacktestResultView } from './BacktestResultView';
+import { runBacktestSimulation } from '../services/api';
 import {
   CheckCircle,
   Copy,
@@ -15,6 +17,8 @@ import {
   Calendar,
   Code2,
   FileCheck2,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 
 interface DefinedExperimentViewProps {
@@ -30,6 +34,35 @@ export const DefinedExperimentView: React.FC<DefinedExperimentViewProps> = ({
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
   const [showJson, setShowJson] = useState<boolean>(false);
+  const [testResult, setTestResult] = useState<BacktestResult | null>(null);
+  const [isTesting, setIsTesting] = useState<boolean>(false);
+  const [testError, setTestError] = useState<string | null>(null);
+  const [testLatencyMs, setTestLatencyMs] = useState<number | null>(null);
+
+  const handleRunBacktest = async () => {
+    setIsTesting(true);
+    setTestError(null);
+    try {
+      const response = await runBacktestSimulation({ spec });
+      setTestResult(response.data);
+      setTestLatencyMs(response.latencyMs);
+    } catch (err: any) {
+      setTestError(err.message || 'Failed to execute backtest simulation.');
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  if (testResult) {
+    return (
+      <BacktestResultView
+        result={testResult}
+        spec={spec}
+        latencyMs={testLatencyMs}
+        onBackToDefinition={() => setTestResult(null)}
+      />
+    );
+  }
 
   const handleCopyJson = async () => {
     try {
@@ -277,29 +310,59 @@ export const DefinedExperimentView: React.FC<DefinedExperimentViewProps> = ({
         </div>
       </div>
 
-      {/* Action Bar: Locked Run Backtest Milestone Gate */}
-      <div className="p-6 rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 via-slate-900/60 to-purple-950/30 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Error Alert if Backtest fails */}
+      {testError && (
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between gap-3 text-xs text-rose-300">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>{testError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setTestError(null)}
+            className="text-[11px] font-bold text-rose-400 hover:text-rose-200 underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Action Bar: Run Backtest Simulation */}
+      <div className="p-6 rounded-2xl border border-cyan-500/40 bg-gradient-to-r from-cyan-950/40 via-slate-900/70 to-indigo-950/40 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              Next Milestone &bull; TEST
+            <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              Execute Milestone &bull; TEST
             </span>
-            <span className="text-xs font-bold text-white">Quantitative Backtesting Engine</span>
+            <span className="text-xs font-bold text-white">Deterministic Backtest Engine</span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            The experiment definition is formally locked. Simulation against historical market data will be activated in the next milestone.
+            Execute a zero-lookahead simulation against synthetic reference bars with conservative order fills and strict cost modeling.
           </p>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
           <button
             type="button"
-            disabled
-            className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-400 bg-slate-800/80 border border-slate-700 cursor-not-allowed opacity-70 flex items-center gap-2"
-            title="Backtesting simulation engine will be activated in the TEST milestone"
+            onClick={handleRunBacktest}
+            disabled={isTesting}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold text-white transition shadow-lg active:scale-95 flex items-center gap-2 ${
+              isTesting
+                ? 'bg-slate-700 cursor-not-allowed opacity-80'
+                : 'bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 shadow-cyan-500/20'
+            }`}
           >
-            <Play className="w-4 h-4 text-slate-500" />
-            <span>Run Backtest &bull; Coming in TEST milestone</span>
+            {isTesting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span>Simulating Backtest...</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 text-cyan-200 fill-current" />
+                <span>Run Backtest Simulation</span>
+              </>
+            )}
           </button>
         </div>
       </div>

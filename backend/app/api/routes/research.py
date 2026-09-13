@@ -5,8 +5,11 @@ from app.schemas.research import (
     ResearchClarifyRequest,
     DefinedExperimentSpec,
     ResearchDefineRequest,
+    TestExecutionRequest,
+    BacktestResult,
 )
 from app.services.experiment_clarifier import ExperimentClarifier
+from app.services.backtest_engine import BacktestEngine
 from app.services.research_analyzer import (
     BaseResearchAnalyzer,
     get_research_analyzer,
@@ -108,5 +111,39 @@ async def define_experiment(
         )
 
     return spec
+
+
+@router.post(
+    "/test",
+    response_model=BacktestResult,
+    status_code=status.HTTP_200_OK,
+    summary="Execute Deterministic Backtest Simulation",
+    description="Simulates the locked DefinedExperimentSpec against deterministic synthetic reference data with zero look-ahead bias and explicit friction accounting.",
+)
+async def run_backtest_simulation(
+    request: TestExecutionRequest,
+) -> BacktestResult:
+    """
+    Executes a quantitative backtest simulation on a strictly defined experiment specification.
+    Guarantees:
+    - Accepts ONLY a DefinedExperimentSpec (cannot bypass DEFINE).
+    - Zero look-ahead bias: signal evaluated at candle t close, order executed at candle t+1 open.
+    - Explicit friction drag and conservative same-bar collision handling.
+    - 100% reproducible for identical specifications.
+    - Stateless: no LLM, database, or live broker connections.
+    """
+    try:
+        result = BacktestEngine.run(
+            spec=request.spec,
+            initial_capital=request.initial_capital,
+        )
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(err),
+        )
+
+    return result
+
 
 

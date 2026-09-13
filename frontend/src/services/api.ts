@@ -5,6 +5,8 @@ import {
   ResearchClarifyRequest,
   DefinedExperimentSpec,
   ResearchDefineRequest,
+  BacktestResult,
+  TestExecutionRequest,
 } from '../types/research';
 
 /**
@@ -199,5 +201,48 @@ export async function defineExperiment(
   }
 }
 
+/**
+ * Executes a deterministic simulated backtest on a DefinedExperimentSpec.
+ * Calls POST /api/research/test without live execution, external data, or LLM calls.
+ */
+export async function runBacktestSimulation(
+  request: TestExecutionRequest
+): Promise<{ data: BacktestResult; latencyMs: number }> {
+  const endpoint = `${API_BASE_URL}/api/research/test`;
+  const startTime = performance.now();
 
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
 
+    const latencyMs = Math.round(performance.now() - startTime);
+
+    if (!response.ok) {
+      let errorMsg = `Test simulation failed with status ${response.status}`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          errorMsg = typeof errorJson.detail === 'string' ? errorJson.detail : JSON.stringify(errorJson.detail);
+        }
+      } catch {
+        // fallback to errorMsg
+      }
+      throw new ApiError(errorMsg, response.status);
+    }
+
+    const data: BacktestResult = await response.json();
+    return { data, latencyMs };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : 'Unknown network connection failure';
+    throw new ApiError(`Unable to reach backtest service at ${API_BASE_URL}: ${message}`);
+  }
+}
